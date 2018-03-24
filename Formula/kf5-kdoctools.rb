@@ -17,7 +17,24 @@ class Kf5Kdoctools < Formula
   depends_on "libxslt"
   depends_on "KDE-mac/kde/kf5-karchive"
 
+  # We need URI::Escape or the CMake will fail.
+  # Adapted from the Rex Formula
+  resource "URI::Escape" do
+    url "https://cpan.metacpan.org/authors/id/E/ET/ETHER/URI-1.73.tar.gz"
+    sha256 "cca7ab4a6f63f3ccaacae0f2e1337e8edf84137e73f18548ec7d659f23efe413"
+  end
+
   def install
+    # Adapted from the Rex Formula
+    ENV.prepend_create_path "PERL5LIB", libexec/"lib/perl5"
+    ENV.prepend_path "PERL5LIB", libexec/"lib"
+    
+    resources.each do |res|
+      res.stage do
+        perl_build
+      end
+    end
+
     args = std_cmake_args
     args << "-DBUILD_TESTING=OFF"
     args << "-DKDE_INSTALL_QMLDIR=lib/qt5/qml"
@@ -31,12 +48,25 @@ class Kf5Kdoctools < Formula
   end
 
   def caveats; <<~EOS
-    Before install of this formula you need to run:
-      brew install cpanminus
-      cpanm URI
-
     You need to take some manual steps in order to make this formula work:
       ln -sf "$(brew --prefix)/share/kf5" "$HOME/Library/Application Support"
     EOS
+  end
+
+  # Adapted from the Rex Formula
+  private
+
+  def perl_build
+    if File.exist? "Makefile.PL"
+      system "perl", "Makefile.PL", "INSTALL_BASE=#{libexec}"
+      system "make", "PERL5LIB=#{ENV["PERL5LIB"]}"
+      system "make", "install"
+    elsif File.exist? "Build.PL"
+      system "perl", "Build.PL", "--install_base", libexec
+      system "./Build", "PERL5LIB=#{ENV["PERL5LIB"]}"
+      system "./Build", "install"
+    else
+      raise "Unknown build system for #{res.name}"
+    end
   end
 end
