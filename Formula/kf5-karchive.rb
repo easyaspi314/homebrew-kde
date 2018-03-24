@@ -14,6 +14,7 @@ class Kf5Karchive < Formula
   depends_on "qt"
   depends_on "zlib"
   depends_on "bzip2"
+  depends_on "xz"
 
   def install
     args = std_cmake_args
